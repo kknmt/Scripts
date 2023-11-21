@@ -20,8 +20,11 @@ if os.path.exists(downloaded_versions_file):
 # MySQLデータベースに接続
 db_connection = connect_to_database()
 
-# テーブルが存在しなければ作成
-if db_connection:
+# 接続が成功したか確認
+if not db_connection:
+    print("Error: Failed to connect to the database.")
+else:
+    # テーブルが存在しなければ作成
     create_table_query = (
         "id INT AUTO_INCREMENT PRIMARY KEY, "
         "version VARCHAR(20) NOT NULL, "
@@ -31,51 +34,55 @@ if db_connection:
     )
     create_table_if_not_exists(db_connection, table_name, create_table_query)
 
-# HTTP GETリクエストを送り、HTMLを取得
-response = requests.get(base_url)
-html_content = response.content
+    try:
+        # HTTP GETリクエストを送り、HTMLを取得
+        response = requests.get(base_url)
+        response.raise_for_status()  # エラーがあれば例外を発生させる
 
-# BeautifulSoupを使用してHTMLを解析
-soup = BeautifulSoup(html_content, "html.parser")
+        # BeautifulSoupを使用してHTMLを解析
+        soup = BeautifulSoup(response.content, "html.parser")
 
-# 正規表現でbeta版をフィルタリング
-beta_regex = re.compile(r'.*beta.*', re.IGNORECASE)
+        # 正規表現でbeta版をフィルタリング
+        beta_regex = re.compile(r'.*beta.*', re.IGNORECASE)
 
-# aタグからバージョンとLast Modifiedを取得
-for link in soup.find_all("a"):
-    href = link.get("href")
+        # aタグからバージョンとLast Modifiedを取得
+        for link in soup.find_all("a"):
+            href = link.get("href")
 
-    # ファイル名が.tar.gzで終わり、beta版を除外
-    if href and href.endswith(".tar.gz") and not beta_regex.match(href):
-        # ファイル名からバージョン情報を正規表現で抽出
-        version_match = re.match(r'httpd-(\d+\.\d+\.\d+).*', href)
-        if version_match:
-            version = version_match.group(1)
+            # ファイル名が.tar.gzで終わり、beta版を除外
+            if href and href.endswith(".tar.gz") and not beta_regex.match(href):
+                # ファイル名からバージョン情報を正規表現で抽出
+                version_match = re.match(r'httpd-(\d+\.\d+\.\d+).*', href)
+                if version_match:
+                    version = version_match.group(1)
 
-            # ダウンロード済みのバージョンか確認
-            if not is_version_downloaded("httpd", version, downloaded_versions):
-                # ファイルのLast Modifiedを取得
-                # 次の行にあるテキストを取得
-                next_td = link.find_next("td")
-                if next_td:  # Noneでないことを確認
-                    last_modified = next_td.find_next("td").text.strip()
-                    last_modified_date = datetime.strptime(last_modified, "%Y-%m-%d %H:%M")
+                    # ダウンロード済みのバージョンか確認
+                    if not is_version_downloaded("httpd", version, downloaded_versions):
+                        # ファイルのLast Modifiedを取得
+                        # 次の行にあるテキストを取得
+                        next_td = link.find_next("td")
+                        if next_td:  # Noneでないことを確認
+                            last_modified = next_td.find_next("td").text.strip()
+                            last_modified_date = datetime.strptime(last_modified, "%Y-%m-%d %H:%M")
 
-                    print(f"Downloading Version: {version}, File URL: {base_url + href}, Last Modified: {last_modified_date}")
+                            print(f"Downloading Version: {version}, File URL: {base_url + href}, Last Modified: {last_modified_date}")
 
-                    # ファイルをダウンロードし、保存
-                    response = requests.get(base_url + href)
-                    file_path = os.path.join(download_dir, href)
-                    save_file(response, file_path)
+                            # ファイルをダウンロードし、保存
+                            response = requests.get(base_url + href)
+                            file_path = os.path.join(download_dir, href)
+                            save_file(response, file_path)
 
-                    # データベースに格納
-                    if db_connection:
-                        data = (None, version, base_url + href, file_path, last_modified_date)
-                        insert_data(db_connection, table_name, data)
+                            # データベースに格納
+                            if db_connection:
+                                data = (None, version, base_url + href, file_path, last_modified_date)
+                                insert_data(db_connection, table_name, data)
 
-                    # ダウンロード済みのバージョン情報を追加
-                    mark_version_as_downloaded("httpd", version, downloaded_versions, downloaded_versions_file)
+                            # ダウンロード済みのバージョン情報を追加
+                            mark_version_as_downloaded("httpd", version, downloaded_versions, downloaded_versions_file)
 
-# MySQLデータベースとの接続を閉じる
-if db_connection:
-    close_connection(db_connection)
+    except Exception as e:
+        print(f"Error: {e}")
+
+    finally:
+        # MySQLデータベースとの接続を閉じる
+        close_connection(db_connection)
