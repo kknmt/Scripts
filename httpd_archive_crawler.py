@@ -1,17 +1,35 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import re
-import os
+from database_utils import connect_to_database, create_table_if_not_exists, insert_data, close_connection
+from file_utils import is_version_downloaded, mark_version_as_downloaded, save_file
 
 base_url = "https://archive.apache.org/dist/httpd/"
 downloaded_versions_file = "/var/repository/apache/downloaded_versions.txt"
+download_dir = "/var/repository/apache/"
+table_name = "apache"
 
 # ダウンロード済みのバージョン情報を読み込む
 downloaded_versions = set()
 if os.path.exists(downloaded_versions_file):
     with open(downloaded_versions_file, "r") as file:
         downloaded_versions = set(file.read().splitlines())
+
+# MySQLデータベースに接続
+db_connection = connect_to_database()
+
+# テーブルが存在しなければ作成
+if db_connection:
+    create_table_query = (
+        "id INT AUTO_INCREMENT PRIMARY KEY, "
+        "version VARCHAR(20) NOT NULL, "
+        "file_url VARCHAR(255) NOT NULL, "
+        "file_path VARCHAR(255) NOT NULL, "
+        "last_modified DATETIME NOT NULL"
+    )
+    create_table_if_not_exists(db_connection, table_name, create_table_query)
 
 # HTTP GETリクエストを送り、HTMLを取得
 response = requests.get(base_url)
@@ -35,21 +53,26 @@ for link in soup.find_all("a"):
             version = version_match.group(1)
 
             # ダウンロード済みのバージョンか確認
-            if version not in downloaded_versions:
-                file_url = base_url + href
-
+            if not is_version_downloaded("httpd", version, downloaded_versions):
                 # ファイルのLast Modifiedを取得
                 last_modified = link.parent.find_next("td").text.strip()
                 last_modified_date = datetime.strptime(last_modified, "%Y-%m-%d %H:%M")
 
-                print(f"Downloading Version: {version}, File URL: {file_url}, Last Modified: {last_modified_date}")
+                print(f"Downloading Version: {version}, File URL: {base_url + href}, Last Modified: {last_modified_date}")
 
                 # ファイルをダウンロードし、保存
-                # ここにダウンロードの処理を追加
+                response = requests.get(base_url + href)
+                file_path = os.path.join(download_dir, href)
+                save_file(response, file_path)
+
+                # データベースに格納
+                if db_connection:
+                    data = (None, version, base_url + href, file_path, last_modified_date)
+                    insert_data(db_connection, table_name, data)
 
                 # ダウンロード済みのバージョン情報を追加
-                downloaded_versions.add(version)
+                mark_version_as_downloaded("httpd", version, downloaded_versions, downloaded_versions_file)
 
-# ダウンロード済みのバージョン情報を保存
-with open(downloaded_versions_file, "w") as file:
-    file.write("\n".join(downloaded_versions))
+# MySQLデータベースとの接続を閉じる
+if db_connection:
+    close_connection(db_connection)
