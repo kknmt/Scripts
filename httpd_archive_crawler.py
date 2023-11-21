@@ -2,8 +2,16 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import re
+import os
 
 base_url = "https://archive.apache.org/dist/httpd/"
+downloaded_versions_file = "/var/repository/apache/downloaded_versions.txt"
+
+# ダウンロード済みのバージョン情報を読み込む
+downloaded_versions = set()
+if os.path.exists(downloaded_versions_file):
+    with open(downloaded_versions_file, "r") as file:
+        downloaded_versions = set(file.read().splitlines())
 
 # HTTP GETリクエストを送り、HTMLを取得
 response = requests.get(base_url)
@@ -25,10 +33,23 @@ for link in soup.find_all("a"):
         version_match = re.match(r'httpd-(\d+\.\d+\.\d+).*', href)
         if version_match:
             version = version_match.group(1)
-            file_url = base_url + href
 
-            # ファイルのLast Modifiedを取得
-            last_modified = link.parent.find_next("td").text.strip()
-            last_modified_date = datetime.strptime(last_modified, "%Y-%m-%d %H:%M")
+            # ダウンロード済みのバージョンか確認
+            if version not in downloaded_versions:
+                file_url = base_url + href
 
-            print(f"Version: {version}, File URL: {file_url}, Last Modified: {last_modified_date}")
+                # ファイルのLast Modifiedを取得
+                last_modified = link.parent.find_next("td").text.strip()
+                last_modified_date = datetime.strptime(last_modified, "%Y-%m-%d %H:%M")
+
+                print(f"Downloading Version: {version}, File URL: {file_url}, Last Modified: {last_modified_date}")
+
+                # ファイルをダウンロードし、保存
+                # ここにダウンロードの処理を追加
+
+                # ダウンロード済みのバージョン情報を追加
+                downloaded_versions.add(version)
+
+# ダウンロード済みのバージョン情報を保存
+with open(downloaded_versions_file, "w") as file:
+    file.write("\n".join(downloaded_versions))
