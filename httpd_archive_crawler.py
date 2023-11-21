@@ -36,8 +36,10 @@ else:
 
     try:
         # HTTP GETリクエストを送り、HTMLを取得
+        print("Fetching HTML content...")
         response = requests.get(base_url)
         response.raise_for_status()  # エラーがあれば例外を発生させる
+        print("HTML content fetched successfully!")
 
         # BeautifulSoupを使用してHTMLを解析
         soup = BeautifulSoup(response.content, "html.parser")
@@ -81,7 +83,7 @@ else:
                             mark_version_as_downloaded("httpd", version, downloaded_versions, downloaded_versions_file)
 
     except Exception as e:
-        print(f"Error: {e}")
+            print(f"Error: {e}")
 
     finally:
         # MySQLデータベースとの接続を閉じる
