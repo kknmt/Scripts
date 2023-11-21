@@ -47,44 +47,44 @@ else:
         # 正規表現でbeta版をフィルタリング
         beta_regex = re.compile(r'.*beta.*', re.IGNORECASE)
 
-        # aタグからバージョンとLast Modifiedを取得
-        for link in soup.find_all("a"):
-            href = link.get("href")
+            # aタグからバージョンとLast Modifiedを取得
+            for link in soup.find_all("a"):
+                href = link.get("href")
 
-            # ファイル名が.tar.gzで終わり、beta版を除外
-            if href and href.endswith(".tar.gz") and not beta_regex.match(href):
-                # ファイル名からバージョン情報を正規表現で抽出
-                version_match = re.match(r'httpd-(\d+\.\d+\.\d+).*', href)
-                if version_match:
-                    version = version_match.group(1)
+                # ファイル名が.tar.gzで終わり、beta版を除外
+                if href and href.endswith(".tar.gz") and not beta_regex.match(href):
+                    # ファイル名からバージョン情報を正規表現で抽出
+                    version_match = re.match(r'httpd-(\d+\.\d+\.\d+).*', href)
+                    if version_match:
+                        version = version_match.group(1)
 
-                    # ダウンロード済みのバージョンか確認
-                    if not is_version_downloaded("httpd", version, downloaded_versions):
-                        # ファイルのLast Modifiedを取得
-                        # 次の行にあるテキストを取得
-                        next_td = link.find_next("td")
-                        if next_td:  # Noneでないことを確認
-                            last_modified = next_td.find_next("td").text.strip()
-                            last_modified_date = datetime.strptime(last_modified, "%Y-%m-%d %H:%M")
+                        # ダウンロード済みのバージョンか確認
+                        if not is_version_downloaded("httpd", version, downloaded_versions):
+                            # ファイルのLast Modifiedを取得
+                            # 次の行にあるテキストを取得
+                            next_td = link.find_next("td")
+                            if next_td:  # Noneでないことを確認
+                                last_modified = next_td.find_next("td").text.strip()
+                                last_modified_date = datetime.strptime(last_modified, "%Y-%m-%d %H:%M")
+        
+                                print(f"Downloading Version: {version}, File URL: {base_url + href}, Last Modified: {last_modified_date}")
 
-                            print(f"Downloading Version: {version}, File URL: {base_url + href}, Last Modified: {last_modified_date}")
+                                # ファイルをダウンロードし、保存
+                                response = requests.get(base_url + href)
+                                file_path = os.path.join(download_dir, href)
+                                save_file(response, file_path)
 
-                            # ファイルをダウンロードし、保存
-                            response = requests.get(base_url + href)
-                            file_path = os.path.join(download_dir, href)
-                            save_file(response, file_path)
+                                # データベースに格納
+                                if db_connection:
+                                    data = (None, version, base_url + href, file_path, last_modified_date)
+                                    insert_data(db_connection, table_name, data)
 
-                            # データベースに格納
-                            if db_connection:
-                                data = (None, version, base_url + href, file_path, last_modified_date)
-                                insert_data(db_connection, table_name, data)
+                                # ダウンロード済みのバージョン情報を追加
+                                mark_version_as_downloaded("httpd", version, downloaded_versions, downloaded_versions_file)
+                                print(f"Version {version} processed successfully!")
 
-                            # ダウンロード済みのバージョン情報を追加
-                            mark_version_as_downloaded("httpd", version, downloaded_versions, downloaded_versions_file)
-                            print(f"Version {version} processed successfully!")
-
-    except Exception as e:
-        print(f"Error: {e}")
+        except Exception as e:
+            print(f"Error: {e}")
 
     finally:
         # MySQLデータベースとの接続を閉じる
