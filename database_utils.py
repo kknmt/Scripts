@@ -5,8 +5,8 @@ def connect_to_database():
     try:
         connection = mysql.connector.connect(
             host='localhost',
-            user='admin',
-            password='password',
+            user='repo_user',
+            password='your_password',
             database='repository'
         )
         return connection
