@@ -1,3 +1,5 @@
+# main_script.py
+
 import os
 import requests
 from bs4 import BeautifulSoup
@@ -7,7 +9,7 @@ from database_utils import connect_to_database, create_table_if_not_exists, inse
 from file_utils import is_version_downloaded, mark_version_as_downloaded, save_file
 
 base_url = "https://archive.apache.org/dist/httpd/"
-downloaded_versions_file = "/var/repository/apache/downloaded_versions.txt"
+downloaded_versions_file = "/var/repository/downloaded_versions.txt"  # 変更した部分
 download_dir = "/var/repository/apache/"
 table_name = "apache"
 
