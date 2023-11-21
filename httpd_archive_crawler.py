@@ -7,7 +7,7 @@ from database_utils import connect_to_database, create_table_if_not_exists, inse
 from file_utils import is_version_downloaded, mark_version_as_downloaded, save_file
 
 base_url = "https://archive.apache.org/dist/httpd/"
-downloaded_versions_file = "/var/repository/downloaded_versions.txt"  # 変更した部分
+downloaded_versions_file = "/var/repository/downloaded_versions.txt"
 download_dir = "/var/repository/apache/"
 table_name = "apache"
 
@@ -75,7 +75,7 @@ for link in soup.find_all("a"):
 
                     # ダウンロード済みのバージョン情報を追加
                     mark_version_as_downloaded("httpd", version, downloaded_versions, downloaded_versions_file)
-                
+
 # MySQLデータベースとの接続を閉じる
 if db_connection:
     close_connection(db_connection)
