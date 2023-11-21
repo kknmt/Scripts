@@ -55,7 +55,8 @@ for link in soup.find_all("a"):
             # ダウンロード済みのバージョンか確認
             if not is_version_downloaded("httpd", version, downloaded_versions):
                 # ファイルのLast Modifiedを取得
-                last_modified = link.parent.find_next("td").text.strip()
+                # 次の行にあるテキストを取得
+                last_modified = link.find_next("td").find_next("td").text.strip()
                 last_modified_date = datetime.strptime(last_modified, "%Y-%m-%d %H:%M")
 
                 print(f"Downloading Version: {version}, File URL: {base_url + href}, Last Modified: {last_modified_date}")
@@ -72,7 +73,7 @@ for link in soup.find_all("a"):
 
                 # ダウンロード済みのバージョン情報を追加
                 mark_version_as_downloaded("httpd", version, downloaded_versions, downloaded_versions_file)
-
+                
 # MySQLデータベースとの接続を閉じる
 if db_connection:
     close_connection(db_connection)
