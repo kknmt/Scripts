@@ -39,8 +39,7 @@ for link in soup.find_all("a"):
         if version_match:
             version = version_match.group(1)
 
-            # ファイルがダウンロード済みか確認
-            if not is_version_downloaded("httpd", version, downloaded_versions):
+            if not is_version_downloaded(table_name, version, db_connection):
                 # ファイルのLast Modifiedを取得
                 # 直後のテキストを取得
                 next_sibling = link.find_next("a").find_next_sibling(string=True)
