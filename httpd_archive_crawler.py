@@ -18,7 +18,7 @@ download_dir = "/var/repository/apache/"
 
 # データベースの設定
 db_connection = create_connection()
-table_name = "apache_2"
+table_name = "apache"
 
 # HTMLを取得
 response = requests.get(base_url)
@@ -32,9 +32,7 @@ for link in soup.find_all("a"):
     if (
         href
         and href.endswith(".tar.gz")
-        and "-alpha" not in href
-        and "-deps" not in href
-        and "-bata" not in href
+        and not any(keyword in href for keyword in ["-alpha", "-deps", "-beta"])
     ):
         # ファイル名からバージョン情報を正規表現で抽出
         version_match = re.match(r'httpd-(\d+\.\d+\.\d+).*', href)
