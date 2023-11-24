@@ -23,3 +23,4 @@ def save_file(response, file_path):
     """Save the downloaded file."""
     with open(file_path, 'wb') as file:
         file.write(response.content)
+    print(f"File saved: {file_path}")

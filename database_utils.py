@@ -17,15 +17,11 @@ def create_connection():
     )
 
 def insert_data(db_connection, table_name, data):
-    cursor = None
-    sql = None
     try:
         cursor = db_connection.cursor()
         placeholders = ', '.join(['%s'] * len(data))
         columns = 'version, last_modified, file_path'
         sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders});"
-        print("SQL:", sql)
-        print("Data:", data)
         cursor.execute(sql, data)
         db_connection.commit()
         return cursor.lastrowid
