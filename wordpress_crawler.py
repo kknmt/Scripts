@@ -4,7 +4,7 @@ import re
 import requests
 from datetime import datetime
 from bs4 import BeautifulSoup
-from file_utils import is_version_downloaded, mark_version_as_downloaded, save_file
+from file_utils import is_version_downloaded, save_file
 from database_utils import create_connection, insert_data
 
 # ダウンロード済みのバージョン情報ファイル
@@ -32,7 +32,7 @@ for version_info in latest_data["offers"]:
     tar_gz_url = version_info["download"]
 
     # ファイルがダウンロード済みか確認
-    if not is_version_downloaded("wordpress", version, downloaded_versions):
+    if not is_version_downloaded(table_name, version, db_connection):
         # ファイルをダウンロードし、保存
         response_tar_gz = requests.get(tar_gz_url)
         file_name_tar_gz = f"wordpress-{version}.tar.gz"
@@ -45,9 +45,6 @@ for version_info in latest_data["offers"]:
             current_date = datetime.now().date()
             data = (version, current_date, file_path_tar_gz)
             insert_data(db_connection, table_name, data)
-
-        # ダウンロード済みのバージョン情報を追加
-        mark_version_as_downloaded("wordpress", version, downloaded_versions, downloaded_versions_file)
 
 # データベース接続を閉じる
 if db_connection:
