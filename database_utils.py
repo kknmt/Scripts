@@ -25,7 +25,7 @@ def insert_data(db_connection, table_name, data):
         sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders});"
         cursor.execute(sql, data)
         db_connection.commit()
-        print(f"Data inserted into {table_name}: {data}")
+        print(f"Data inserted into {table_name}")
         return cursor.lastrowid
     except mysql.connector.Error as err:
         print(f"Error: {err}")
