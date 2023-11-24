@@ -17,6 +17,7 @@ def create_connection():
     )
 
 def insert_data(db_connection, table_name, data):
+    cursor = None
     try:
         cursor = db_connection.cursor()
         placeholders = ', '.join(['%s'] * len(data))
@@ -24,6 +25,7 @@ def insert_data(db_connection, table_name, data):
         sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders});"
         cursor.execute(sql, data)
         db_connection.commit()
+        print(f"Data inserted into {table_name}: {data}")
         return cursor.lastrowid
     except mysql.connector.Error as err:
         print(f"Error: {err}")
