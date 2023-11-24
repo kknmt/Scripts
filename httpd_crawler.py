@@ -7,9 +7,6 @@ from bs4 import BeautifulSoup
 from file_utils import is_version_downloaded, save_file
 from database_utils import create_connection, insert_data
 
-# ダウンロード済みのバージョン情報ファイル
-downloaded_versions_file = "/var/repository/downloaded_versions.txt"
-downloaded_versions = []
 
 # ソフトウェアのベースURL
 base_url = "https://archive.apache.org/dist/httpd/"
