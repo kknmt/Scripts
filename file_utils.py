@@ -19,12 +19,6 @@ def is_version_downloaded(table_name, version, db_connection):
             pass  # すでに読み取り済みの場合はスキップ
         cursor.close()
 
-def mark_version_as_downloaded(software, version, downloaded_versions, file_path):
-    """Mark the version as downloaded by adding it to the downloaded_versions file."""
-    with open(file_path, 'a') as file:
-        file.write(f"{software}-{version}\n")
-    downloaded_versions.append(f"{software}-{version}")
-
 def save_file(response, file_path):
     """Save the downloaded file."""
     with open(file_path, 'wb') as file:

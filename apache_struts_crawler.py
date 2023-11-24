@@ -4,7 +4,7 @@ from datetime import datetime
 import re
 import requests
 from bs4 import BeautifulSoup
-from file_utils import is_version_downloaded, mark_version_as_downloaded, save_file
+from file_utils import is_version_downloaded, save_file
 from database_utils import create_connection, insert_data
 
 # ダウンロード済みのバージョン情報ファイル
@@ -77,9 +77,6 @@ for version_link in soup.find_all("a", href=re.compile(r'^\d+\.\d+\.\d+/$')):
                         if db_connection:
                             data = (version, last_modified_date, file_path)
                             insert_data(db_connection, table_name, data)
-
-                        # ダウンロード済みのバージョン情報を追加
-                        mark_version_as_downloaded("struts", version, downloaded_versions, downloaded_versions_file)
 
 # データベース接続を閉じる
 if db_connection:
