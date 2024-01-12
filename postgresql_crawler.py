@@ -4,15 +4,11 @@ from datetime import datetime
 import re
 import requests
 from bs4 import BeautifulSoup
-from file_utils import is_version_downloaded, save_file
+from file_utils import save_file
 from database_utils import create_connection, insert_data
 
 # ソフトウェアのベースURL
 base_url = "https://www.postgresql.org/ftp/source/"
-
-# HTMLを取得
-response = requests.get(base_url)
-soup = BeautifulSoup(response.text, "html.parser")
 
 # ダウンロード先ディレクトリ
 download_dir = "/var/repository/postgresql/"
@@ -21,46 +17,45 @@ download_dir = "/var/repository/postgresql/"
 db_connection = create_connection()
 table_name = "postgresql"
 
-# フォルダのリンクを取得
-folder_links = soup.find_all("a", href=re.compile(r"v\d+\.\d+(\.\d+)?/"))
+# HTMLを取得
+response = requests.get(base_url)
+soup = BeautifulSoup(response.text, "html.parser")
 
-for folder_link in folder_links:
-    folder_url = base_url + folder_link["href"]
-    folder_response = requests.get(folder_url)
-    folder_soup = BeautifulSoup(folder_response.text, "html.parser")
+# バージョンごとのリンクを取得
+for version_link in soup.find_all("a", href=re.compile(r'^v\d+\.\d+/')):
+    version_url = base_url + version_link.get("href")
 
-    # ファイル情報を含む行を取得
-    file_rows = folder_soup.find_all("tr")
+    # バージョンごとのHTMLを取得
+    version_response = requests.get(version_url)
+    version_soup = BeautifulSoup(version_response.text, "html.parser")
 
-    for row in file_rows:
-        file_info = row.find("a", href=re.compile(r"postgresql-\d+(\.\d+){0,2}\.tar\.gz$"))
-        print(file_info)
-        if file_info:
-            file_url = folder_url + file_info["href"]
-            file_name = file_info.get_text(strip=True)
-            version_match = re.match(r'postgresql-(\d+\.\d+(\.\d+)?)\.tar\.gz', file_name)
-    
-            if version_match:
-                version = version_match.group(1)
+    # ファイル情報を取得
+    for file_row in version_soup.select("#pgFtpContent table tr"):
+        file_link = file_row.find("a", href=True)
+        file_date = file_row.find_all("td")[1].text.strip()
 
+        if file_link:
+            href = file_link["href"]
 
-                # ここにダウンロードとデータベースへの保存処理を追加
-                print("Version found:", version)
+            # ファイル名が.tar.gzで終わる場合のみ処理
+            if href.endswith(".tar.gz"):
+                # ファイル名からバージョン情報を正規表現で抽出
+                version_match = re.match(r'postgresql-(\d+(\.\d+)*)', href)
+                if version_match:
+                    version = version_match.group(1)
 
-                if not is_version_downloaded(table_name, version, db_connection):
-                    last_modified = row.find_all("td")[1].get_text(strip=True)
+                    # ファイルのLast Modifiedを取得
+                    last_modified_date = datetime.strptime(file_date, "%Y-%m-%d %H:%M:%S").date()
 
-                    if last_modified:
-                        last_modified_date = datetime.strptime(last_modified, "%Y-%m-%d %H:%M:%S").date()
-                        response = requests.get(file_url)
-                        file_path = os.path.join(download_dir, f"postgresql-{version}.tar.gz")
-                        save_file(response, file_path)
+                    # ファイルをダウンロードし、保存
+                    response = requests.get(version_url + href)
+                    file_path = os.path.join(download_dir, href)
+                    save_file(response, file_path)
 
-                        if db_connection:
-                            data = (version, last_modified_date, file_path)
-                            insert_data(db_connection, table_name, data)
-                else:
-                    print("Version not found for file:", file_url)
+                    # データベースに格納
+                    if db_connection:
+                        data = (version, last_modified_date, file_path)
+                        insert_data(db_connection, table_name, data)
 
 # データベース接続を閉じる
 if db_connection:
